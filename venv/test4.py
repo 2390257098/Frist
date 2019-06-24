@@ -14,33 +14,43 @@ import xlsxwriter
 import xlrd
 import json
 import requests
+from datetime import datetime
+
 
 
 # 读取本地txt文件，转列表
-fi = open(r'C:\Users\Dell\Desktop\asd.txt', 'r')
-txt = fi.readlines()
+txt1 = open('shop_urls.txt', 'r')
+shop_urls = txt1.readlines()
 shops = []
-for w in txt:
-    w = w.replace('\n', '')
-    shops.append(w)
+for shop in shop_urls:
+    shop = shop.replace('\n', '')
+    shops.append(shop)
 # 创建表格
-# workbook = xlsxwriter.Workbook(r'C:\Users\Dell\Desktop\data\today.xlsx')
-# sheet1 = workbook.add_worksheet('sheet1')
-# sheet1.write(0, 0, '产品id')
-# sheet1.write(0, 1, '标题')
-# sheet1.write(0, 2, '销量')
-# sheet1.write(0, 3, '评价数量')
-# sheet1.write(0, 4, '评价星级')
-# sheet1.write(0, 5, '收藏数')
-# sheet1.write(0, 6, '原价(美元)')
-# sheet1.write(0, 7, '促销价(美元)')
+workbook = xlsxwriter.Workbook(datetime.now().date().isoformat()+'.xlsx')
+sheet1 = workbook.add_worksheet('sheet1')
+sheet1.write(0, 0, '产品id')
+sheet1.write(0, 1, '标题')
+sheet1.write(0, 2, '销量')
+sheet1.write(0, 3, '评价数量')
+sheet1.write(0, 4, '评价星级')
+sheet1.write(0, 5, '收藏数')
+sheet1.write(0, 6, '原价(美元)')
+sheet1.write(0, 7, '促销价(美元)')
 # 新建一个产品的列表
 product_urls = []
+# 读取账号和密码
+txt2 = open('email_pwd.txt', 'r')
+pwd = txt2.readlines()
+email_pwd = []
+for w in pwd:
+    w = w.replace('\n', '')
+    email_pwd.append(w)
 # 打开浏览器
 option = ChromeOptions()
+# option.add_experimental_option('excludeSwitches', ['enable-automation'])
 # option.add_argument("--proxy-server=http://115.153.14.157:4549")
 # option.add_argument("--headless")
-browser = webdriver.Chrome(r'D:\dev\tool\google\chromedriver.exe', options=option)
+browser = webdriver.Chrome('google\chromedriver.exe', options=option)
 wait = WebDriverWait(browser, 60)
 browser.set_window_size(1400, 39000)
 
@@ -51,9 +61,9 @@ time.sleep(5)
 frame1 = browser.find_element_by_css_selector("#alibaba-login-box")
 browser.switch_to_frame(frame1)
 # 模拟输入登录的账号
-browser.find_element_by_css_selector('#fm-login-id').send_keys('2390257098@qq.com')
+browser.find_element_by_css_selector('#fm-login-id').send_keys(email_pwd[0])
 # 模拟输入登录的密码
-browser.find_element_by_css_selector('#fm-login-password').send_keys('986946Lhb')
+browser.find_element_by_css_selector('#fm-login-password').send_keys(email_pwd[1])
 # 模拟点击登录按钮
 # time.sleep(3)
 # browser.find_element_by_xpath('//*[@id="login-form"]/div[5]/button').click()
@@ -69,7 +79,7 @@ jsonCookies = json.dumps(dict_cookies)
 # print(jsonCookies)
 # time.sleep(120)
 # 保存到本地
-with open(r'cookies.json', 'w') as f:
+with open('cookies.json', 'w') as f:
     f.write(jsonCookies)
 time.sleep(3)
 # 添加cookies
@@ -80,7 +90,7 @@ time.sleep(3)
 for shop in shops:
     print(shop)
     browser.get(shop)
-    time.sleep(5)
+    time.sleep(3)
     # while True:
         # try:
             # 获取滑块
@@ -95,11 +105,15 @@ for shop in shops:
     # print(browser.get_cookies())
     # 从商家url中获取出店铺id
     shop_id = shop[shop.rfind('all-wholesale-products'):shop.find('.html')][23:]
-    time.sleep(3)
     html = browser.page_source
     doc = pq(html)
     # 获取该店商品总数，以得到最大页数
     shop_product_num = doc.find('#your-choice > div.result-info').text()[0:-12]
+    # 1000以上商品数会表示为 1,000 所以这里需要进行下判断
+    if len(shop_product_num) == 5:
+        shop_product_num = shop_product_num[:1]+shop_product_num[2:]
+    if len(shop_product_num) == 6:
+        shop_product_num = shop_product_num[:2]+shop_product_num[3:]
     print('本店商品数为：'+shop_product_num)
     if shop_product_num == '':
         break
@@ -120,7 +134,7 @@ for shop in shops:
                 for item in items:
                     #  进入列表拿到每个商品的url
                     product_url = 'https:'+item.find('div.detail > h3 > a').attr('href')
-                    print(product_url)
+                    # print(product_url)
                     #  加进集合中
                     product_urls.append(product_url[0:product_url.rfind('.html')] + '.html')
 
@@ -139,62 +153,63 @@ for shop in shops:
                 for item in items:
                     #  进入列表拿到每个商品的url
                     product_url = 'https:'+item.find('div.detail > h3 > a').attr('href')
-                    print(product_url)
+                    # print(product_url)
                     #  加进集合中
                     product_urls.append(product_url[0:product_url.rfind('.html')] + '.html')
 
     # wait.until(EC.presence_of_element_located(
        #(By.CSS_SELECTOR, '#node-gallery > div.module.m-o.m-o-large-all-detail > div > div > ul')))
 # 退出，清除浏览器缓存
-browser.quit()
+# 读取cookies
+cookie = open(r'cookies.json','r')#打开所保存的cookies内容文件
+cookies = {}#初始化cookies字典变量
+for line in cookie.read().split(';'):  #按照字符：进行划分读取
+  #其设置为1就会把字符串拆分成2份
+
+  name, value = line.strip().split('=', 1)
+  cookies[name] = value
 product_num = len(product_urls)
 print('今日爬取产品总数是：'+str(product_num))
 for i in range(1, product_num+1):
-    document = requests.get(product_urls[i-1])
-    # browser.get(product_urls[i - 1])
-    # html = browser.page_source
-    # doc = pq(html)
-    if document.status_code == 200:
-        document.encoding = 'utf8'
-        soup = document.text
-        # doc = pq(soup)
-        doc = BeautifulSoup(soup, 'html.parser')
-        title = doc.find('#j-product-detail-bd > div.store-detail-main > div > h1').text()
-        order = doc.find('#j-order-num').text()[0:-6]
-        comment_num = doc.find('#j-product-tabbed-pane > ul > li:nth-child(2) > a').text()[10:-1]
-        if comment_num == '0':
-            comment_num == ''
-        grade = doc.find('#j-customer-reviews-trigger > span.percent-num').text()
-        like = doc.find(
-            '//*[@id="root"]/div/div[1]/div/div[2]/div[11]/span[3]/div/span').text()
-        print('该商品收藏数为：' + like)
-        Price = doc.find('#j-sku-price').text()
-        Discount_Price = doc.find('#j-sku-discount-price').text()
-        # sheet1.write(i, 0, product_urls[i-1][-16:-5])
-        # sheet1.write(i, 1, title)
-        # sheet1.write(i, 2, order)
-        # sheet1.write(i, 3, comment_num)
-        # sheet1.write(i, 4, grade)
-        # sheet1.write(i, 5, like)
-        # sheet1.write(i, 6, Price)
-        # sheet1.write(i, 7, Discount_Price)
-        print(title)
-        print(order)
-        print(comment_num)
-        print(grade)
-        print(like)
-        print(Price)
-        print(Discount_Price)
-    else:
-        print('网页请求访问失败！！！')
+    # document = requests.get(product_urls[i-1])
+    browser.get(product_urls[i - 1])
+    time.sleep(3)
+    html = browser.page_source
+    doc = pq(html)
+    title = doc.find('#j-product-detail-bd > div.store-detail-main > div > h1').text()
+    order = doc.find('#j-order-num').text()[0:-6]
+    comment_num = doc.find('#j-product-tabbed-pane > ul > li:nth-child(2) > a').text()[10:-1]
+    if comment_num == '0':
+        comment_num = ' '
+    grade = doc.find('#j-customer-reviews-trigger > span.percent-num').text()
+    like = doc.find('#j-product-action-block > span.product-action-main > div').text()
+    Price = doc.find('#j-sku-price').text()
+    Discount_Price = doc.find('#j-sku-discount-price').text()
+    sheet1.write(i, 0, product_urls[i - 1][-16:-5])
+    sheet1.write(i, 1, title)
+    sheet1.write(i, 2, order)
+    sheet1.write(i, 3, comment_num)
+    sheet1.write(i, 4, grade)
+    sheet1.write(i, 5, like)
+    sheet1.write(i, 6, Price)
+    sheet1.write(i, 7, Discount_Price)
+    print(like)
+    # doc = BeautifulSoup(soup, 'html.parser')
+
+
+
+
+
+
+
     # time.sleep(3)
     # 等待页面加载
     # wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#bd')))
 
 
-
+browser.quit()
 product_urls.clear()
-# workbook.close()
+workbook.close()
 
 
 
